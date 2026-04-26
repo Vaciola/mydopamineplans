@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>我的每日计划本</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600;700;900&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans SC','PingFang SC',sans-serif;background:linear-gradient(160deg,#FFE4EC 0%,#E8F4FF 50%,#E4FFF4 100%);min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-thumb{background:rgba(255,150,180,0.3);border-radius:99px}
+
+/* blobs */
+.blob{position:fixed;border-radius:50%;filter:blur(52px);pointer-events:none;opacity:.2;z-index:0}
+
+/* header */
+.header{position:sticky;top:0;z-index:200;background:rgba(255,255,255,.55);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:2px solid rgba(255,255,255,.8);padding:14px 20px;display:flex;align-items:center;gap:14px}
+.menu-btn{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.42);backdrop-filter:blur(12px);border:2px solid rgba(255,255,255,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.menu-btn span{width:18px;height:2.5px;background:#FFB3C6;border-radius:99px;display:block}
+.header-title{font-size:18px;font-weight:900}
+
+/* sidebar */
+.overlay{position:fixed;inset:0;z-index:800;background:rgba(200,215,240,.22);backdrop-filter:blur(4px);display:none}
+.overlay.show{display:block}
+.sidebar{position:fixed;top:0;left:0;bottom:0;z-index:900;width:240px;padding:28px 16px;background:rgba(255,255,255,.82);backdrop-filter:blur(28px) saturate(200%);-webkit-backdrop-filter:blur(28px) saturate(200%);border-right:2px solid rgba(255,255,255,.92);box-shadow:6px 0 48px rgba(200,180,220,.12);transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+.sidebar.show{transform:translateX(0)}
+.sidebar-logo{font-size:17px;font-weight:900;color:#FF8FAB;margin-bottom:30px;padding-left:8px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;margin-bottom:6px;cursor:pointer;font-size:15px;font-weight:600;color:#aaa;border:2px solid transparent;transition:all .18s}
+.nav-item .nav-icon{font-size:20px}
+
+/* content */
+.content{max-width:480px;margin:0 auto;padding:24px 20px 60px;position:relative;z-index:1}
+
+/* glass button */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 24px;font-size:15px;font-weight:700;border:2px solid rgba(255,255,255,.8);border-radius:16px;backdrop-filter:blur(16px) saturate(180%);-webkit-backdrop-filter:blur(16px) saturate(180%);background:rgba(255,255,255,.35);box-shadow:0 3px 12px rgba(0,0,0,.06),inset 0 1px 0 rgba(255,255,255,.7);cursor:pointer;transition:all .18s ease;font-family:inherit;width:100%}
+.btn:hover{background:rgba(255,255,255,.65);transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.1),inset 0 1px 0 rgba(255,255,255,.9)}
+.btn-sm{padding:7px 16px;font-size:13px;border-radius:12px;width:auto}
+
+/* progress */
+.progress-bar{margin-bottom:16px;height:10px;background:rgba(255,179,198,.18);border-radius:99px;overflow:hidden;border:1.5px solid rgba(255,255,255,.6)}
+.progress-fill{height:100%;background:linear-gradient(90deg,#FFB3C6,#FFD54F,#A8E6CF);border-radius:99px;transition:width .5s cubic-bezier(.4,2,.6,1);box-shadow:0 2px 8px rgba(255,100,150,.25)}
+
+/* section label */
+.sec-label{font-size:12px;font-weight:800;margin-bottom:8px;letter-spacing:.8px}
+
+/* task card */
+.task-card{background:linear-gradient(135deg,#FFE4EC,rgba(255,255,255,.92));border:2.5px solid #FFB3C6;border-radius:20px;padding:13px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 10px rgba(0,0,0,.04);transition:all .22s;position:relative}
+.task-card:hover{transform:translateX(5px);box-shadow:0 8px 24px rgba(0,0,0,.09)}
+.task-card.done{opacity:.6;border-color:#ebebeb !important}
+.task-check{width:26px;height:26px;border-radius:50%;flex-shrink:0;border:3px solid #FFB3C6;background:rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s}
+.task-check.checked{background:#ccc;border-color:#ccc}
+.task-check.checked::after{content:'✓';color:#fff;font-size:13px;font-weight:900}
+.time-badge{color:#fff;border-radius:10px;padding:3px 10px;font-size:11px;font-weight:800;flex-shrink:0;white-space:nowrap}
+.task-name{flex:1;font-size:15px;font-weight:700;color:#444;word-break:break-word}
+.task-card.done .task-name{color:#ccc;text-decoration:line-through}
+.task-actions{display:flex;gap:5px;opacity:0;transition:opacity .18s;flex-shrink:0}
+.task-card:hover .task-actions{opacity:1}
+
+/* modal */
+.modal-bg{position:fixed;inset:0;z-index:500;background:rgba(200,215,240,.3);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:20px;display:none}
+.modal-bg.show{display:flex}
+.modal{background:rgba(255,255,255,.92);backdrop-filter:blur(24px);border:2px solid rgba(255,255,255,.96);border-radius:28px;padding:28px;width:100%;max-width:360px;box-shadow:0 24px 64px rgba(150,150,200,.18)}
+.modal-title{font-size:18px;font-weight:900;color:#FF8FAB;margin-bottom:18px}
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;font-weight:800;color:#bbb;margin-bottom:7px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-input{width:100%;padding:10px 14px;border-radius:13px;border:2px solid rgba(255,179,198,.4);background:rgba(255,255,255,.65);font-size:14px;font-weight:600;color:#555;outline:none;font-family:inherit;transition:border-color .2s}
+.form-input:focus{border-color:#FFB3C6}
+.color-dots{display:flex;gap:8px;margin-top:4px}
+.color-dot{width:28px;height:28px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all .15s}
+.color-dot.selected{border-color:#555}
+.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
+
+/* flip card */
+.flip-overlay{position:fixed;inset:0;z-index:2000;background:rgba(255,180,200,.4);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:20px;display:none}
+.flip-overlay.show{display:flex}
+.flip-scene{perspective:1000px;width:100%;max-width:360px;height:230px}
+.flip-card{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .65s cubic-bezier(.4,2,.55,1)}
+.flip-card.flipped{transform:rotateY(180deg)}
+.flip-front,.flip-back{position:absolute;inset:0;backface-visibility:hidden;border-radius:28px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.flip-front{background:linear-gradient(135deg,#FFB3C6,#FFD54F);box-shadow:0 24px 60px rgba(255,100,150,.3)}
+.flip-back{background:linear-gradient(135deg,#A8E6CF,#87CEEB);transform:rotateY(180deg);padding:28px 32px;box-shadow:0 24px 60px rgba(100,200,220,.3)}
+.flip-emoji{font-size:52px;margin-bottom:8px}
+.flip-title{font-size:20px;font-weight:900;color:#fff;text-align:center;padding:0 24px;text-shadow:0 2px 8px rgba(0,0,0,.12)}
+.quote-text{font-size:17px;font-weight:800;color:#fff;text-align:center;line-height:1.7}
+.quote-author{margin-top:14px;font-size:13px;color:rgba(255,255,255,.85);font-weight:600}
+.quote-hint{margin-top:18px;font-size:12px;color:rgba(255,255,255,.5)}
+
+/* stat cards */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.stat-card{background:rgba(255,255,255,.65);backdrop-filter:blur(16px);border:2px solid rgba(255,255,255,.9);border-radius:22px;padding:20px 16px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.05)}
+.stat-icon{font-size:30px}
+.stat-value{font-size:30px;font-weight:900;margin-top:6px}
+.stat-label{font-size:12px;color:#aaa;font-weight:700;margin-top:3px}
+
+/* history card */
+.hist-card{background:rgba(255,255,255,.52);backdrop-filter:blur(12px);border:2px solid rgba(255,255,255,.85);border-radius:18px;padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 12px rgba(0,0,0,.04)}
+.hist-pct{width:50px;height:50px;border-radius:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#fff}
+.hist-bar{height:6px;background:rgba(200,200,200,.2);border-radius:99px;overflow:hidden;margin-top:7px}
+.hist-fill{height:100%;border-radius:99px}
+.hist-emoji{font-size:24px}
+
+/* top card */
+.top-card{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.pct-badge{background:rgba(255,255,255,.52);backdrop-filter:blur(12px);border:2px solid rgba(255,255,255,.85);border-radius:18px;padding:8px 16px;text-align:center}
+.pct-num{font-size:22px;font-weight:900;color:#FF8FAB}
+.pct-sub{font-size:11px;color:#bbb;font-weight:700}
+
+.page-title{font-size:22px;font-weight:900}
+.page-subtitle{font-size:13px;color:#bbb;font-weight:600;margin-top:2px}
+.empty{text-align:center;padding:52px 16px;color:#ccc;font-weight:700;font-size:15px}
+.empty-icon{font-size:48px;margin-bottom:12px}
+.overall-box{background:rgba(255,255,255,.55);backdrop-filter:blur(12px);border:2px solid rgba(255,255,255,.85);border-radius:22px;padding:18px 20px}
+.overall-label{font-size:13px;font-weight:800;color:#bbb;margin-bottom:10px}
+.overall-row{display:flex;align-items:center;gap:12px}
+.overall-track{flex:1;height:12px;background:rgba(200,200,200,.18);border-radius:99px;overflow:hidden}
+.overall-fill{height:100%;background:linear-gradient(90deg,#FFB3C6,#FFD54F,#A8E6CF);border-radius:99px}
+.overall-num{font-weight:900;color:#FF8FAB;font-size:18px;flex-shrink:0}
+
+@media(max-width:480px){.task-actions{opacity:1}}
+</style>
+</head>
+<body>
+
+<!-- Blobs -->
+<div class="blob" style="top:-100px;left:-80px;width:280px;height:280px;background:#FFB3C6"></div>
+<div class="blob" style="top:160px;right:-70px;width:200px;height:200px;background:#A8E6CF"></div>
+<div class="blob" style="bottom:80px;left:20px;width:160px;height:160px;background:#87CEEB"></div>
+<div class="blob" style="bottom:-80px;right:40px;width:220px;height:220px;background:#FFD54F"></div>
+
+<!-- Header -->
+<div class="header">
+  <div class="menu-btn" onclick="toggleSidebar()">
+    <span></span><span></span><span></span>
+  </div>
+  <div class="header-title" id="headerTitle" style="color:#FF8FAB">今日计划</div>
+</div>
+
+<!-- Sidebar -->
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-logo">✨ 我的计划本</div>
+  <div class="nav-item" id="nav-today"   onclick="switchView('today')"  ><span class="nav-icon">📅</span>今日计划</div>
+  <div class="nav-item" id="nav-history" onclick="switchView('history')"><span class="nav-icon">📆</span>历史记录</div>
+  <div class="nav-item" id="nav-stats"   onclick="switchView('stats')"  ><span class="nav-icon">📊</span>我的统计</div>
+</div>
+
+<!-- Content -->
+<div class="content">
+  <div id="view-today"></div>
+  <div id="view-history" style="display:none"></div>
+  <div id="view-stats" style="display:none"></div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-bg" id="taskModal">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">✨ 添加计划</div>
+    <div class="form-group">
+      <div class="form-label">计划内容</div>
+      <input class="form-input" id="inputName" placeholder="比如：读书 30 分钟" onkeydown="if(event.key==='Enter')submitTask()"/>
+    </div>
+    <div class="form-group">
+      <div class="form-row">
+        <div>
+          <div class="form-label">开始时间</div>
+          <input class="form-input" type="time" id="inputStart"/>
+        </div>
+        <div>
+          <div class="form-label">结束时间</div>
+          <input class="form-input" type="time" id="inputEnd"/>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-label">卡片颜色</div>
+      <div class="color-dots" id="colorDots"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-sm" style="color:#bbb" onclick="closeModal()">取消</button>
+      <button class="btn btn-sm" id="submitBtn" style="color:#FF8FAB" onclick="submitTask()">添加 🎉</button>
+    </div>
+  </div>
+</div>
+
+<!-- Flip Card -->
+<div class="flip-overlay" id="flipOverlay" onclick="closeFlip()">
+  <div class="flip-scene">
+    <div class="flip-card" id="flipCard">
+      <div class="flip-front">
+        <div class="flip-emoji">🎊</div>
+        <div class="flip-title" id="flipTitle"></div>
+      </div>
+      <div class="flip-back">
+        <div class="quote-text" id="quoteText"></div>
+        <div class="quote-author" id="quoteAuthor"></div>
+        <div class="quote-hint">点击关闭</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── DATA ── */
+const QUOTES=[
+  {text:"千里之行，始于足下。",author:"老子《道德经》"},
+  {text:"不积跬步，无以至千里；不积小流，无以成江海。",author:"荀子《劝学》"},
+  {text:"路漫漫其修远兮，吾将上下而求索。",author:"屈原《离骚》"},
+  {text:"学而不思则罔，思而不学则殆。",author:"孔子《论语》"},
+  {text:"宝剑锋从磨砺出，梅花香自苦寒来。",author:"古训"},
+  {text:"知之者不如好之者，好之者不如乐之者。",author:"孔子《论语》"},
+  {text:"己所不欲，勿施于人。",author:"孔子《论语》"},
+  {text:"没有比脚更长的路，没有比人更高的山。",author:"汪国真"},
+  {text:"Stay hungry, stay foolish.",author:"Steve Jobs"},
+  {text:"The only way to do great work is to love what you do.",author:"Steve Jobs"},
+  {text:"In the middle of difficulty lies opportunity.",author:"Albert Einstein"},
+  {text:"We are what we repeatedly do. Excellence is not an act, but a habit.",author:"Aristotle"},
+  {text:"The secret of getting ahead is getting started.",author:"Mark Twain"},
+  {text:"It always seems impossible until it's done.",author:"Nelson Mandela"},
+  {text:"Believe you can and you're halfway there.",author:"Theodore Roosevelt"},
+  {text:"Fall seven times, stand up eight.",author:"日本谚语"},
+  {text:"Every moment is a fresh beginning.",author:"T.S. Eliot"},
+];
+const COLORS=[
+  {bg:"#FFB3C6",light:"#FFE4EC"},
+  {bg:"#87CEEB",light:"#D4EDFA"},
+  {bg:"#A8E6CF",light:"#D4F5E9"},
+  {bg:"#FFD54F",light:"#FFF3C4"},
+  {bg:"#FFAB76",light:"#FFE4CC"},
+  {bg:"#C3B1E1",light:"#EDE4FA"},
+];
+const NAV_META={
+  today:  {label:"今日计划",color:"#FF8FAB"},
+  history:{label:"历史记录",color:"#87CEEB"},
+  stats:  {label:"我的统计",color:"#FFAB76"},
+};
+
+/* ── STORAGE ── */
+const LS="dailyPlanner_v1";
+let allTasks={};
+try{allTasks=JSON.parse(localStorage.getItem(LS))||{};}catch{}
+function save(){try{localStorage.setItem(LS,JSON.stringify(allTasks));}catch{}}
+
+/* ── UTILS ── */
+function todayKey(){
+  const d=new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+function dayLabel(k){
+  const [y,m,d]=k.split("-").map(Number);
+  return `${m}月${d}日 周${"日一二三四五六"[new Date(y,m-1,d).getDay()]}`;
+}
+function rand(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
+/* ── VIEW STATE ── */
+let currentView="today";
+let editingId=null;
+let selectedColor=0;
+
+/* ── SIDEBAR ── */
+function toggleSidebar(){
+  document.getElementById("sidebar").classList.toggle("show");
+  document.getElementById("overlay").classList.toggle("show");
+}
+function closeSidebar(){
+  document.getElementById("sidebar").classList.remove("show");
+  document.getElementById("overlay").classList.remove("show");
+}
+function switchView(v){
+  currentView=v;
+  closeSidebar();
+  document.querySelectorAll(".nav-item").forEach(el=>el.style.cssText="");
+  const ni=document.getElementById("nav-"+v);
+  const meta=NAV_META[v];
+  ni.style.background=meta.color+"1A";
+  ni.style.border="2px solid "+meta.color+"44";
+  ni.style.fontWeight="800";
+  ni.style.color=meta.color;
+  document.getElementById("headerTitle").textContent=meta.label;
+  document.getElementById("headerTitle").style.color=meta.color;
+  ["today","history","stats"].forEach(id=>{
+    document.getElementById("view-"+id).style.display=id===v?"block":"none";
+  });
+  if(v==="today")   renderToday();
+  if(v==="history") renderHistory();
+  if(v==="stats")   renderStats();
+}
+
+/* ── RENDER TODAY ── */
+function renderToday(){
+  const tk=todayKey();
+  const tasks=allTasks[tk]||[];
+  const done=tasks.filter(t=>t.done).length;
+  const pct=tasks.length>0?Math.round((done/tasks.length)*100):0;
+  const pending=tasks.filter(t=>!t.done).sort(sortByTime);
+  const finished=tasks.filter(t=>t.done).sort(sortByTime);
+
+  let html=`
+    <div class="top-card">
+      <div>
+        <div class="page-title" style="color:#FF8FAB">今日计划</div>
+        <div class="page-subtitle">${dayLabel(tk)}</div>
+      </div>
+      <div class="pct-badge">
+        <div class="pct-num">${pct}%</div>
+        <div class="pct-sub">${done}/${tasks.length} 完成</div>
+      </div>
+    </div>`;
+  if(tasks.length>0) html+=`
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>`;
+  html+=`<div style="margin-bottom:18px"><button class="btn" style="color:#FF8FAB" onclick="openAddModal()">＋ 添加计划</button></div>`;
+
+  if(tasks.length===0){
+    html+=`<div class="empty"><div class="empty-icon">🌸</div>还没有计划，添加一个吧！</div>`;
+  } else {
+    if(pending.length>0){
+      html+=`<div class="sec-label" style="color:#FF8FAB">📋 待完成</div>`;
+      pending.forEach(t=>{ html+=taskCardHTML(t); });
+    }
+    if(finished.length>0){
+      html+=`<div class="sec-label" style="color:#A8E6CF;margin-top:${pending.length>0?18:0}px">✅ 已完成</div>`;
+      finished.forEach(t=>{ html+=taskCardHTML(t); });
+    }
+  }
+  document.getElementById("view-today").innerHTML=html;
+}
+
+function sortByTime(a,b){
+  if(!a.startTime&&!b.startTime)return 0;
+  if(!a.startTime)return 1; if(!b.startTime)return -1;
+  return a.startTime.localeCompare(b.startTime);
+}
+
+function taskCardHTML(t){
+  const c=COLORS[t.colorIdx%COLORS.length];
+  const timeStr=t.startTime&&t.endTime?`${t.startTime} – ${t.endTime}`:t.startTime?t.startTime:t.endTime?`至 ${t.endTime}`:"";
+  const timeBadge=timeStr?`<div class="time-badge" style="background:${c.bg};box-shadow:0 2px 8px ${c.bg}55">${esc(timeStr)}</div>`:"";
+  return `<div class="task-card ${t.done?"done":""}" style="background:linear-gradient(135deg,${c.light},rgba(255,255,255,.92));border-color:${t.done?"#ebebeb":c.bg}">
+    <div class="task-check ${t.done?"checked":""}" onclick="toggleTask('${t.id}')"></div>
+    ${timeBadge}
+    <div class="task-name">${esc(t.name)}</div>
+    <div class="task-actions">
+      <button class="btn btn-sm" style="color:#87CEEB" onclick="openEditModal('${t.id}')">✏️</button>
+      <button class="btn btn-sm" style="color:#FFB3C6" onclick="deleteTask('${t.id}')">🗑️</button>
+    </div>
+  </div>`;
+}
+
+/* ── TOGGLE / DELETE ── */
+function toggleTask(id){
+  const tk=todayKey();
+  const tasks=allTasks[tk]||[];
+  const t=tasks.find(t=>t.id===id);
+  if(!t)return;
+  const wasUndone=!t.done;
+  t.done=!t.done;
+  allTasks[tk]=tasks;
+  save();
+  renderToday();
+  if(wasUndone) showFlip(t.name);
+}
+function deleteTask(id){
+  const tk=todayKey();
+  allTasks[tk]=(allTasks[tk]||[]).filter(t=>t.id!==id);
+  save(); renderToday();
+}
+
+/* ── MODAL ── */
+function openAddModal(){
+  editingId=null;
+  document.getElementById("modalTitle").textContent="✨ 添加计划";
+  document.getElementById("submitBtn").textContent="添加 🎉";
+  document.getElementById("inputName").value="";
+  document.getElementById("inputStart").value="";
+  document.getElementById("inputEnd").value="";
+  const tk=todayKey();
+  selectedColor=((allTasks[tk]||[]).length)%COLORS.length;
+  renderColorDots();
+  document.getElementById("taskModal").classList.add("show");
+  setTimeout(()=>document.getElementById("inputName").focus(),100);
+}
+function openEditModal(id){
+  const tk=todayKey();
+  const t=(allTasks[tk]||[]).find(t=>t.id===id);
+  if(!t)return;
+  editingId=id;
+  document.getElementById("modalTitle").textContent="✏️ 修改计划";
+  document.getElementById("submitBtn").textContent="保存";
+  document.getElementById("inputName").value=t.name;
+  document.getElementById("inputStart").value=t.startTime||"";
+  document.getElementById("inputEnd").value=t.endTime||"";
+  selectedColor=t.colorIdx;
+  renderColorDots();
+  document.getElementById("taskModal").classList.add("show");
+  setTimeout(()=>document.getElementById("inputName").focus(),100);
+}
+function closeModal(){
+  document.getElementById("taskModal").classList.remove("show");
+}
+function renderColorDots(){
+  document.getElementById("colorDots").innerHTML=COLORS.map((c,i)=>
+    `<div class="color-dot ${i===selectedColor?"selected":""}" style="background:${c.bg};${i===selectedColor?"box-shadow:0 0 0 2px "+c.bg+"88":""}" onclick="pickColor(${i})"></div>`
+  ).join("");
+}
+function pickColor(i){
+  selectedColor=i;
+  renderColorDots();
+}
+function submitTask(){
+  const name=document.getElementById("inputName").value.trim();
+  if(!name)return;
+  const tk=todayKey();
+  const tasks=allTasks[tk]||[];
+  if(editingId){
+    const t=tasks.find(t=>t.id===editingId);
+    if(t){t.name=name;t.startTime=document.getElementById("inputStart").value;t.endTime=document.getElementById("inputEnd").value;t.colorIdx=selectedColor;}
+  } else {
+    tasks.push({id:Date.now().toString(),name,startTime:document.getElementById("inputStart").value,endTime:document.getElementById("inputEnd").value,colorIdx:selectedColor,done:false});
+  }
+  allTasks[tk]=tasks;
+  save(); closeModal(); renderToday();
+}
+
+/* ── FLIP CARD ── */
+function showFlip(taskName){
+  const q=rand(QUOTES);
+  document.getElementById("flipTitle").textContent=taskName+" · 完成！";
+  document.getElementById("quoteText").textContent=`"${q.text}"`;
+  document.getElementById("quoteAuthor").textContent="— "+q.author;
+  document.getElementById("flipOverlay").classList.add("show");
+  setTimeout(()=>document.getElementById("flipCard").classList.add("flipped"),60);
+}
+function closeFlip(){
+  document.getElementById("flipCard").classList.remove("flipped");
+  setTimeout(()=>document.getElementById("flipOverlay").classList.remove("show"),440);
+}
+
+/* ── HISTORY ── */
+function renderHistory(){
+  const today=todayKey();
+  const entries=Object.entries(allTasks)
+    .filter(([k,tasks])=>k!==today&&tasks.length>0)
+    .map(([k,tasks])=>({k,total:tasks.length,done:tasks.filter(t=>t.done).length}))
+    .sort((a,b)=>b.k.localeCompare(a.k));
+  let html=`<div class="page-title" style="color:#87CEEB;margin-bottom:20px">历史记录</div>`;
+  if(entries.length===0){
+    html+=`<div class="empty"><div class="empty-icon">📅</div>还没有历史记录</div>`;
+  } else {
+    entries.forEach(({k,total,done})=>{
+      const pct=Math.round((done/total)*100);
+      const col=pct===100?"#A8E6CF":pct>=50?"#FFD54F":"#FFB3C6";
+      const emoji=pct===100?"🌟":pct>=50?"👍":"💪";
+      html+=`<div class="hist-card">
+        <div class="hist-pct" style="background:${col};box-shadow:0 4px 14px ${col}66">${pct}%</div>
+        <div style="flex:1">
+          <div style="font-weight:800;color:#555;font-size:15px">${dayLabel(k)}</div>
+          <div style="font-size:12px;color:#bbb;margin-top:3px">完成 ${done} / ${total} 项</div>
+          <div class="hist-bar"><div class="hist-fill" style="width:${pct}%;background:${col}"></div></div>
+        </div>
+        <div class="hist-emoji">${emoji}</div>
+      </div>`;
+    });
+  }
+  document.getElementById("view-history").innerHTML=html;
+}
+
+/* ── STATS ── */
+function renderStats(){
+  let totalDone=0,totalAll=0,perfectDays=0;
+  Object.values(allTasks).forEach(tasks=>{
+    if(!tasks.length)return;
+    const d=tasks.filter(t=>t.done).length;
+    totalDone+=d; totalAll+=tasks.length;
+    if(d===tasks.length)perfectDays++;
+  });
+  let streak=0;
+  const d=new Date();
+  for(let i=0;i<365;i++){
+    const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    const tasks=allTasks[k];
+    if(tasks&&tasks.length>0&&tasks.some(t=>t.done))streak++;
+    else if(i>0)break;
+    d.setDate(d.getDate()-1);
+  }
+  const pct=totalAll>0?Math.round((totalDone/totalAll)*100):0;
+  const totalDays=Object.values(allTasks).filter(t=>t.length>0).length;
+  const items=[
+    {label:"连续打卡",value:streak,unit:"天",color:"#FFD54F",icon:"🔥"},
+    {label:"打卡天数",value:totalDays,unit:"天",color:"#87CEEB",icon:"📅"},
+    {label:"累计完成",value:totalDone,unit:"项",color:"#A8E6CF",icon:"✅"},
+    {label:"全勤天数",value:perfectDays,unit:"天",color:"#FFB3C6",icon:"🌟"},
+  ];
+  let html=`<div class="page-title" style="color:#FFAB76;margin-bottom:20px">我的统计</div>
+    <div class="stat-grid">`;
+  items.forEach(({label,value,unit,color,icon})=>{
+    html+=`<div class="stat-card">
+      <div class="stat-icon">${icon}</div>
+      <div class="stat-value" style="color:${color}">${value}</div>
+      <div class="stat-label">${unit} · ${label}</div>
+    </div>`;
+  });
+  html+=`</div>`;
+  if(totalAll>0){
+    html+=`<div class="overall-box">
+      <div class="overall-label">总体完成率</div>
+      <div class="overall-row">
+        <div class="overall-track"><div class="overall-fill" style="width:${pct}%"></div></div>
+        <div class="overall-num">${pct}%</div>
+      </div>
+    </div>`;
+  } else {
+    html+=`<div class="empty"><div class="empty-icon">📊</div>还没有数据，快去添加计划吧！</div>`;
+  }
+  document.getElementById("view-stats").innerHTML=html;
+}
+
+/* ── INIT ── */
+switchView("today");
+</script>
+</body>
+</html>
